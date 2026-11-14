@@ -1,98 +1,119 @@
 --[[
-  NeonMenu Ultra v3.5 — Часть 1/3 (Конфигурация и обходы)
+  NeonMenu Ultra v4.0 [Animated & Custom Models Edition] — Часть 1/3
 ]]
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
-local mouse = player:GetMouse()
 
--- Защита от критических ошибок и детект-киков (обход ошибки 267)
+-- Защита от крашей (Anti-Crash & Anti-267)
 local function safeCall(func, ...)
 	local success, err = pcall(func, ...)
 	if not success then return nil end
 	return err
 end
 
+-- Защищенный контейнер GUI для экзекутора
+local guiParent = safeCall(function() return gethui() end) or player:WaitForChild("PlayerGui")
+
 local Theme = {
-	Bg = Color3.fromRGB(12, 12, 18),
-	Panel = Color3.fromRGB(18, 18, 28),
-	Item = Color3.fromRGB(26, 26, 40),
-	Accent = Color3.fromRGB(139, 92, 246),
-	Accent2 = Color3.fromRGB(34, 211, 238),
-	Text = Color3.fromRGB(235, 235, 245),
-	Muted = Color3.fromRGB(140, 140, 165),
+	Bg = Color3.fromRGB(10, 10, 15),
+	Panel = Color3.fromRGB(16, 16, 24),
+	Item = Color3.fromRGB(22, 22, 35),
+	Accent = Color3.fromRGB(139, 92, 246), -- Неоновый фиолетовый
+	Accent2 = Color3.fromRGB(34, 211, 238), -- Неоновый голубой
+	Text = Color3.fromRGB(240, 240, 255),
+	Muted = Color3.fromRGB(120, 120, 150),
 }
 
-local function tween(obj, props, t)
+local function tween(obj, props, t, style)
 	safeCall(function()
-		TweenService:Create(obj, TweenInfo.new(t or 0.18, Enum.EasingStyle.Quad), props):Play()
+		TweenService:Create(obj, TweenInfo.new(t or 0.2, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
 	end)
 end
 
 local function make(class, props, parent)
 	local o = Instance.new(class)
-	for k, v in pairs(props) do 
-		safeCall(function() o[k] = v end)
-	end
+	for k, v in pairs(props) do safeCall(function() o[k] = v end) end
 	if parent then o.Parent = parent end
 	return o
 end
 
 local function corner(o, r) make("UICorner", {CornerRadius = UDim.new(0, r or 8)}, o) end
 
+-- Глобальные настройки чит-меню
 local Settings = {
-	AimAssist = false,
-	AimSmooth = 8,
-	AimFOV = 120,
-	TeamCheck = true,
+	SilentAim = false,
+	AimFOV = 100,
 	WallCheck = true,
-	TargetPart = "Head",
-	TriggerBot = false,
 	ESP_Chams = false,
-	WalkSpeed = 16,
-	JumpPower = 50,
-	InfiniteJump = false,
+	HitboxExpander = false,
 	Noclip = false,
-	Fly = false,
+	InfiniteJump = false,
+	BunnyHop = false,
 	AntiVoid = true,
-	AutoFarm = false,
 }
 
+-- 🔍 Умный сканер для кастомных моделей шутеров
+local function getCustomRoot(char)
+	if not char then return nil end
+	return char:FindFirstChild("HumanoidRootPart") 
+		or char:FindFirstChild("RootPart") 
+		or char:FindFirstChild("Torso") 
+		or char:FindFirstChild("UpperTorso") 
+		or char:FindFirstChild("MainPart")
+end
+
+local function getCustomHead(char)
+	if not char then return nil end
+	local head = char:FindFirstChild("Head") or char:FindFirstChild("Helmet") or char:FindFirstChild("FacePart")
+	if not head then
+		local maxY = -math.huge
+		for _, p in ipairs(char:GetChildren()) do
+			if p:IsA("BasePart") and p.Position.Y > maxY then
+				maxY = p.Position.Y
+				head = p
+			end
+		end
+	end
+	return head
+end
+
 --[[
-  NeonMenu Ultra v3.5 — Часть 2/3 (Интерфейс и вкладки)
+  NeonMenu Ultra v4.0 — Часть 2/3 (Анимированный интерфейс)
 ]]
 
 local gui = make("ScreenGui", {
-	Name = "NeonMenuSecure", 
+	Name = "NeonUltraAnimated", 
 	ResetOnSpawn = false, 
 	IgnoreGuiInset = true, 
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-}, safeCall(function() return CoreGui end) or player:WaitForChild("PlayerGui"))
+}, guiParent)
 
 local main = make("Frame", {
-	Size = UDim2.fromOffset(580, 410), 
+	Size = UDim2.fromOffset(600, 420), 
 	Position = UDim2.fromScale(0.5, 0.5), 
 	AnchorPoint = Vector2.new(0.5, 0.5), 
-	BackgroundColor3 = Theme.Bg
+	BackgroundColor3 = Theme.Bg,
+	BackgroundTransparency = 0.05
 }, gui)
-corner(main, 14)
-make("UIStroke", {Color = Theme.Accent, Thickness = 1.5, Transparency = 0.4}, main)
+corner(main, 16)
+make("UIStroke", {Color = Theme.Accent, Thickness = 2, Transparency = 0.3}, main)
 
-local header = make("Frame", {Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1}, main)
+-- Шапка
+local header = make("Frame", {Size = UDim2.new(1, 0, 0, 45), BackgroundTransparency = 1}, main)
 make("TextLabel", {
-	Text = "NEON ULTRA v3.5 [SECURE BYPASS]", 
+	Text = "⚡ NEON ULTRA v4.0 [CUSTOM SHOTGUN EDITION]", 
 	Font = Enum.Font.GothamBold, 
-	TextSize = 14, 
+	TextSize = 13, 
 	TextColor3 = Theme.Text, 
 	BackgroundTransparency = 1, 
-	Position = UDim2.fromOffset(16, 0), 
+	Position = UDim2.fromOffset(18, 0), 
 	Size = UDim2.new(0.7, 0, 1, 0), 
 	TextXAlignment = Enum.TextXAlignment.Left
 }, header)
@@ -100,14 +121,18 @@ make("TextLabel", {
 local closeBtn = make("TextButton", {
 	Text = "×", 
 	Font = Enum.Font.GothamBold, 
-	TextSize = 20, 
+	TextSize = 22, 
 	TextColor3 = Theme.Muted, 
 	BackgroundTransparency = 1, 
-	Size = UDim2.fromOffset(36, 36), 
-	Position = UDim2.new(1, -40, 0, 2)
+	Size = UDim2.fromOffset(40, 40), 
+	Position = UDim2.new(1, -45, 0, 2),
+	AutoButtonColor = false
 }, header)
 
--- Перетаскивание мышей
+closeBtn.MouseEnter:Connect(function() tween(closeBtn, {TextColor3 = Color3.fromRGB(255, 80, 80)}, 0.15) end)
+closeBtn.MouseLeave:Connect(function() tween(closeBtn, {TextColor3 = Theme.Muted}, 0.15) end)
+
+-- Перетаскивание окна
 do
 	local dragging, startPos, startInput
 	header.InputBegan:Connect(function(i)
@@ -128,116 +153,145 @@ do
 	end)
 end
 
-local tabBar = make("Frame", {Size = UDim2.new(0, 130, 1, -50), Position = UDim2.fromOffset(10, 45), BackgroundColor3 = Theme.Panel}, main)
-corner(tabBar, 10)
-make("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}, tabBar)
-make("UIPadding", {PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}, tabBar)
+-- Боковая панель вкладок
+local tabBar = make("Frame", {Size = UDim2.new(0, 140, 1, -55), Position = UDim2.fromOffset(12, 50), BackgroundColor3 = Theme.Panel}, main)
+corner(tabBar, 12)
+make("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, tabBar)
+make("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}, tabBar)
 
-local content = make("Frame", {Size = UDim2.new(1, -155, 1, -50), Position = UDim2.fromOffset(145, 45), BackgroundTransparency = 1}, main)
+local content = make("Frame", {Size = UDim2.new(1, -168, 1, -55), Position = UDim2.fromOffset(156, 50), BackgroundTransparency = 1}, main)
 local pages, tabButtons = {}, {}
 
 local function selectTab(name)
-	for n, page in pairs(pages) do page.Visible = (n == name) end
+	for n, page in pairs(pages) do 
+		page.Visible = (n == name)
+		if n == name then
+			page.Position = UDim2.fromOffset(0, 10)
+			page.BackgroundTransparency = 1
+			tween(page, {Position = UDim2.fromOffset(0, 0)}, 0.25, Enum.EasingStyle.Back)
+		end
+	end
 	for n, b in pairs(tabButtons) do
-		tween(b, {BackgroundColor3 = (n == name) and Theme.Accent or Theme.Item, TextColor3 = (n == name) and Color3.new(1, 1, 1) or Theme.Muted})
+		local active = (n == name)
+		tween(b, {
+			BackgroundColor3 = active and Theme.Accent or Theme.Item,
+			TextColor3 = active and Color3.new(1, 1, 1) + Color3.fromRGB(20,20,20) or Theme.Muted
+		}, 0.2)
 	end
 end
 
 local function addTab(name, order)
-	local b = make("TextButton", {Text = name, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Muted, BackgroundColor3 = Theme.Item, Size = UDim2.new(1, 0, 0, 30), LayoutOrder = order, AutoButtonColor = false}, tabBar)
-	corner(b, 6)
+	local b = make("TextButton", {Text = name, Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.Muted, BackgroundColor3 = Theme.Item, Size = UDim2.new(1, 0, 0, 34), LayoutOrder = order, AutoButtonColor = false}, tabBar)
+	corner(b, 8)
+	
+	b.MouseEnter:Connect(function() if tabButtons[name].BackgroundColor3 ~= Theme.Accent then tween(b, {TextColor3 = Theme.Text}, 0.15) end end)
+	b.MouseLeave:Connect(function() if tabButtons[name].BackgroundColor3 ~= Theme.Accent then tween(b, {TextColor3 = Theme.Muted}, 0.15) end end)
+
 	local page = make("ScrollingFrame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y, Visible = false}, content)
-	make("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, page)
+	make("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, page)
+	
 	pages[name], tabButtons[name] = page, b
 	b.MouseButton1Click:Connect(function() selectTab(name) end)
 	return page
 end
 
 local function section(page, text)
-	make("TextLabel", {Text = text:upper(), Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Theme.Accent2, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Left}, page)
+	make("TextLabel", {Text = text:upper(), Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Theme.Accent2, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Left}, page)
 end
 
+-- Плавный анимированный тоггл
 local function toggle(page, text, default, cb)
 	local state = default
-	local row = make("TextButton", {Text = "", BackgroundColor3 = Theme.Item, Size = UDim2.new(1, 0, 0, 32), AutoButtonColor = false}, page)
-	corner(row, 6)
-	make("TextLabel", {Text = text, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Text, BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -60, 1, 0), TextXAlignment = Enum.TextXAlignment.Left}, row)
-	local track = make("Frame", {Size = UDim2.fromOffset(34, 16), Position = UDim2.new(1, -42, 0.5, -8), BackgroundColor3 = state and Theme.Accent or Color3.fromRGB(50, 50, 70)}, row)
-	corner(track, 8)
-	local knob = make("Frame", {Size = UDim2.fromOffset(12, 12), Position = state and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 2), BackgroundColor3 = Color3.new(1, 1, 1)}, track)
-	corner(knob, 6)
+	local row = make("TextButton", {Text = "", BackgroundColor3 = Theme.Item, Size = UDim2.new(1, 0, 0, 36), AutoButtonColor = false}, page)
+	corner(row, 8)
+	
+	row.MouseEnter:Connect(function() tween(row, {BackgroundColor3 = Color3.fromRGB(28, 28, 45)}, 0.15) end)
+	row.MouseLeave:Connect(function() tween(row, {BackgroundColor3 = Theme.Item}, 0.15) end)
+
+	make("TextLabel", {Text = text, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Text, BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -70, 1, 0), TextXAlignment = Enum.TextXAlignment.Left}, row)
+	
+	local track = make("Frame", {Size = UDim2.fromOffset(40, 20), Position = UDim2.new(1, -48, 0.5, -10), BackgroundColor3 = state and Theme.Accent or Color3.fromRGB(40, 40, 60)}, row)
+	corner(track, 10)
+	
+	local knob = make("Frame", {Size = UDim2.fromOffset(16, 16), Position = state and UDim2.fromOffset(21, 2) or UDim2.fromOffset(3, 2), BackgroundColor3 = Color3.new(1, 1, 1)}, track)
+	corner(knob, 8)
 	
 	row.MouseButton1Click:Connect(function()
 		state = not state
-		tween(track, {BackgroundColor3 = state and Theme.Accent or Color3.fromRGB(50, 50, 70)})
-		tween(knob, {Position = state and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 2)})
+		tween(track, {BackgroundColor3 = state and Theme.Accent or Color3.fromRGB(40, 40, 60)}, 0.2)
+		tween(knob, {Position = state and UDim2.fromOffset(21, 2) or UDim2.fromOffset(3, 2)}, 0.2, Enum.EasingStyle.Back)
 		safeCall(cb, state)
 	end)
 	safeCall(cb, state)
 end
 
+-- Создаем вкладки
 local combatTab = addTab("Бой", 1)
-local espTab = addTab("Визуал (ESP)", 2)
+local espTab = addTab("Визуал", 2)
 local moveTab = addTab("Движение", 3)
-local utilsTab = addTab("Функции", 4)
 
-section(combatTab, "Безопасный Aimbot")
-toggle(combatTab, "Aim Assist (ПКМ)", false, function(v) Settings.AimAssist = v end)
-toggle(combatTab, "TriggerBot (Автовыстрел)", false, function(v) Settings.TriggerBot = v end)
+section(combatTab, "Наводка")
+toggle(combatTab, "Silent Aim Assist", false, function(v) Settings.SilentAim = v end)
+toggle(combatTab, "WallCheck (Проверка стен)", true, function(v) Settings.WallCheck = v end)
 
-section(espTab, "Подсветка игроков (Safe)")
-toggle(espTab, "Chams (Подсветка сквозь стены)", false, function(v) Settings.ESP_Chams = v end)
+section(espTab, "Подсветка игроков")
+toggle(espTab, "Chams (Сквозь стены)", false, function(v) Settings.ESP_Chams = v end)
+toggle(espTab, "Увеличение хитбоксов", false, function(v) Settings.HitboxExpander = v end)
 
-section(moveTab, "Параметры персонажа")
-toggle(moveTab, "Бесконечный прыжок", false, function(v) Settings.InfiniteJump = v end)
+section(moveTab, "Физика и Мувмент")
 toggle(moveTab, "Noclip (Ходьба сквозь стены)", false, function(v) Settings.Noclip = v end)
-toggle(moveTab, "Fly (Полёт на WASD)", false, function(v) Settings.Fly = v end)
-
-section(utilsTab, "Автоматизация и Трейсеры")
-toggle(utilsTab, "Анти-падение в бездну", true, function(v) Settings.AntiVoid = v end)
-toggle(utilsTab, "Авто-фарм / Сбор элементов", false, function(v) Settings.AutoFarm = v end)
+toggle(moveTab, "Infinite Jump (Бесконечный прыжок)", false, function(v) Settings.InfiniteJump = v end)
+toggle(moveTab, "BunnyHop (Авто-распрыжка)", false, function(v) Settings.BunnyHop = v end)
 
 selectTab("Бой")
 
 --[[
-  NeonMenu Ultra v3.5 — Часть 3/3 (Игровая логика и циклы)
+  NeonMenu Ultra v4.0 — Часть 3/3 (Логика читов под кастомные игры)
 ]]
 
 local function isEnemy(plr)
-	if not Settings.TeamCheck then return true end
 	if not player.Team or not plr.Team then return true end
 	return player.Team ~= plr.Team
 end
 
--- Безопасный Chams через стандартный Highlight (без детекта 267)
+-- Safe Chams с учетом кастомных частей тела
 RunService.RenderStepped:Connect(function()
 	safeCall(function()
-		local rainbowColor = Color3.fromHSV((tick() * 0.2) % 1, 0.8, 1)
-
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= player and plr.Character then
 				local char = plr.Character
-				local hum = char:FindFirstChildOfClass("Humanoid")
+				local head = getCustomHead(char)
 				local enemy = isEnemy(plr)
 
-				local hl = char:FindFirstChild("SafeHighlight")
-				if Settings.ESP_Chams and enemy and hum and hum.Health > 0 then
+				local hl = char:FindFirstChild("CustomChams")
+				if Settings.ESP_Chams and enemy and head then
 					if not hl then
 						hl = Instance.new("Highlight")
-						hl.Name = "SafeHighlight"
-						hl.FillTransparency = 0.5
+						hl.Name = "CustomChams"
+						hl.FillTransparency = 0.45
+						hl.FillColor = Color3.fromRGB(255, 40, 40)
+						hl.OutlineColor = Theme.Accent2
 						hl.Parent = char
 					end
-					hl.FillColor = rainbowColor
-					hl.OutlineColor = Theme.Accent2
 				elseif hl then
 					hl:Destroy()
+				end
+
+				-- Расширение хитбоксов для кастомных моделей
+				if Settings.HitboxExpander and enemy then
+					local root = getCustomRoot(char)
+					if root then
+						root.Size = Vector3.new(4, 4, 4)
+						root.Transparency = 0.8
+						root.CanCollide = false
+					end
 				end
 			end
 		end
 	end)
 end)
 
+-- Бесконечный прыжок и BunnyHop
 UserInputService.JumpRequest:Connect(function()
 	safeCall(function()
 		if Settings.InfiniteJump and player.Character then
@@ -251,39 +305,25 @@ RunService.Stepped:Connect(function()
 	safeCall(function()
 		local char = player.Character
 		if not char then return end
-		local hrp = char:FindFirstChild("HumanoidRootPart")
 		local hum = char:FindFirstChildOfClass("Humanoid")
 
+		-- Noclip для кастомных ригов
 		if Settings.Noclip then
-			for _, part in ipairs(char:GetDescendants()) do
-				if part:IsA("BasePart") then part.CanCollide = false end
+			for _, p in ipairs(char:GetDescendants()) do
+				if p:IsA("BasePart") then p.CanCollide = false end
 			end
 		end
 
-		if hum then
-			if Settings.WalkSpeed ~= 16 then hum.WalkSpeed = Settings.WalkSpeed end
-			if Settings.JumpPower ~= 50 then hum.JumpPower = Settings.JumpPower end
-		end
-
-		if Settings.AntiVoid and hrp and hrp.Position.Y < -60 then
-			hrp.CFrame = CFrame.new(hrp.Position.X, 50, hrp.Position.Z)
-			hrp.AssemblyLinearVelocity = Vector3.zero
-		end
-		
-		if Settings.AutoFarm then
-			pcall(function()
-				for _, obj in ipairs(workspace:GetDescendants()) do
-					if obj:IsA("BasePart") and (obj.Name:lower():find("coin") or obj.Name:lower():find("gem") or obj.Name:lower():find("star")) then
-						if hrp and (obj.Position - hrp.Position).Magnitude < 25 then
-							hrp.CFrame = obj.CFrame
-						end
-					end
-				end
-			end)
+		-- BunnyHop симуляция
+		if Settings.BunnyHop and hum then
+			if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+				hum:ChangeState(Enum.HumanoidStateType.Jumping)
+			end
 		end
 	end)
 end)
 
+-- Скрытие меню на RightShift
 local isOpen = true
 closeBtn.MouseButton1Click:Connect(function()
 	isOpen = not isOpen
